@@ -1,0 +1,10 @@
+credentials.json
+.env
+.job-scraper/
+venv/
+env/
+__pycache__/
+*.pyc
+*.json
+.ipynb_checkpoints/
+*.ipynb
