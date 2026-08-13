@@ -13,12 +13,16 @@ HEADERS = {
 
 
 # Scrape list of job
-def scrape_jobstreet(query="machine-learning-jobs", daterange=1, max_pages=10):
+def scrape_jobstreet(query="machine-learning-jobs", daterange=1, max_pages=10, proxies=None):
     jobs = []
     for page in range(1, max_pages + 1):
         # url = f"https://id.jobstreet.com/id/{query}?page={page}"
         url = f"https://id.jobstreet.com/{query}?page={page}&daterange={daterange}"
-        resp = requests.get(url, headers=HEADERS, timeout=15)
+        try:
+            resp = requests.get(url, headers=HEADERS, proxies=proxies, timeout=15)
+        except Exception as e:
+            print(f"Page {page}: Proxy {proxies} failed: {e}")
+            break
         
         if resp.status_code != 200:
             print(f"Page {page}: status {resp.status_code}, stop")
@@ -59,9 +63,13 @@ def scrape_jobstreet(query="machine-learning-jobs", daterange=1, max_pages=10):
     return jobs
 
 
-def scrape_job_detail(job_id):
+def scrape_job_detail(job_id, proxies=None):
     url = f"https://id.jobstreet.com/id/job/{job_id}"
-    resp=requests.get(url, headers=HEADERS, timeout=15)
+    try:
+        resp = requests.get(url, headers=HEADERS, proxies=proxies, timeout=15)
+    except Exception as e:
+        print(f"Job ID {job_id}: Proxy {proxies} failed: {e}")
+        return None
     
     if resp.status_code != 200:
         print(f"Job ID {job_id}: status {resp.status_code}, stop")
