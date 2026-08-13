@@ -2,12 +2,27 @@ name: Job Scraper Pipeline
 
 on:
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "30 0 * * *"
   workflow_dispatch:
+    inputs:
+      daterange:
+        description: 'Date range (day)'
+        required: false
+        default: '1'
+      max_pages:
+        description: 'Max page will scrape'
+        required: false
+        default: '10'
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    services:
+      flaresolverr:
+        image: ghcr.io/flaresolverr/flaresolverr:latest
+        ports:
+          - 8191:8191
+
     steps:
       - uses: actions/checkout@v4
 
@@ -18,10 +33,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Wait for FlareSolverr to be ready
+        run: sleep 10
+
       - name: Write credentials
-        run: echo '${{ secrets.GCP_CREDENTIALS }}' > credentials.json
+        run: |
+          cat << 'EOF' > credentials.json
+          ${{ secrets.GCP_CREDENTIALS }}
+          EOF
 
       - name: Run pipeline
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          FLARESOLVERR_URL: http://localhost:8191/v1
+          DATERANGE: ${{ github.event.inputs.daterange || '1' }}
+          MAX_PAGES: ${{ github.event.inputs.max_pages || '10' }}
         run: python main.py

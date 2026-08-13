@@ -25,18 +25,6 @@ INSTRUCTIONS:
 Job description:
 {full_description}
 """
-#     prompt = f"""From this job description, extract core requirements (tools, tech stack, hard skills, and relevant domain experience).
-
-# Rules:
-# - Do NOT include education requirements
-# - Do NOT include soft skills (e.g. "good communication", "team player")
-# - Only include items EXPLICITLY mentioned in the text
-# - Don't use introduction sentences like "Here are...", etc
-# - OUTPUT FORMAT: Return ONLY a single line of plain text. List all items separated by commas (,). DO NOT use bullet points, numbers, dashes, or newlines. Just return the raw comma-separated list.
-
-# Job description:
-# {full_description}
-# """
 
     resp = client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
