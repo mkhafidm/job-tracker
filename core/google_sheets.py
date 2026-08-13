@@ -12,7 +12,6 @@ SHEET_HEADERS = [
 
 COLUMN_MAP = {
     "Apply": lambda j: False,                                    
-    # "Tanggal Post": lambda j: j.get("posted", ""),
     "Tanggal Post": lambda j: parse_posted_date(j.get("posted", "")),                                       
     "Perusahaan": lambda j: j.get("company", ""),            
     "Role": lambda j: j.get("title", ""),                        
@@ -30,32 +29,15 @@ COLUMN_MAP = {
 }
 
 
-def parse_posted_date(posted_text, reference_time=None):
-    if not posted_text:
+def parse_posted_date(posted_iso, reference_time=None):
+    if not posted_iso:
         return ""
-
-    ref = reference_time or datetime.now()
-    text = posted_text.lower()
-
-    if "baru saja" in text or "hari ini" in text:
-        return ref.strftime("%d/%m/%Y")
-    if "kemarin" in text:
-        return (ref - timedelta(days=1)).strftime("%d/%m/%Y")
-
-    match = re.search(r"(\d+)\s*(menit|jam|hari|minggu|bulan)", text)
-    if not match:
-        return posted_text
-
-    value, unit = int(match.group(1)), match.group(2)
-    delta = {
-        "menit": timedelta(minutes=value),
-        "jam": timedelta(hours=value),
-        "hari": timedelta(days=value),
-        "minggu": timedelta(weeks=value),
-        "bulan": timedelta(days=value * 30),
-    }[unit]
-
-    return (ref - delta).strftime("%d/%m/%Y")
+    try:
+        dt = datetime.fromisoformat(posted_iso.replace("Z", "+00:00"))
+        return dt.strftime("%d/%m/%Y")
+    except (ValueError, TypeError) as e:
+        print(f"Gagal parse tanggal: {posted_iso} - {e}")
+        return posted_iso
 
 
 def upload_jobs_to_gsheet(jobs:list, spreadsheet_name, worksheet_name):
@@ -85,9 +67,6 @@ def upload_jobs_to_gsheet(jobs:list, spreadsheet_name, worksheet_name):
             worksheet.update(f"A{next_row}:O{end_row}", rows_to_append, value_input_option="USER_ENTERED")
             print(f"Success upload {len(rows_to_append)} data, start row {next_row}")
 
-        # if rows_to_append:
-        #     worksheet.append_rows(rows_to_append)
-        #     print(f"Success upload {len(rows_to_append)} data to spreadsheet {spreadsheet_name}")
         else:
             print("No data to upload")
 

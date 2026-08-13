@@ -1,125 +1,161 @@
-from bs4 import BeautifulSoup
-from datetime import datetime
-import requests
-import random
-import time
 import re
+import json
+import requests
+import os
+import time
+import random
+from bs4 import BeautifulSoup
 
 
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
-}
+FLARESOLVERR_URL = os.environ.get("FLARESOLVERR_URL", "http://localhost:8191/v1")
 
 
-# Scrape list of job
-def scrape_jobstreet(query="machine-learning-jobs", daterange=1, max_pages=10):
+# HELPER
+def fetch_via_flaresolverr(url, timeout=90000):
+    resp = requests.post(FLARESOLVERR_URL, json={
+        "cmd": "request.get",
+        "url": url,
+        "maxTimeout": timeout
+    }, timeout=timeout / 1000 + 30)
+    data = resp.json()
+    if data.get("status") != "ok":
+        print(f"FlareSolverr failed for {url}: {data.get('message')}")
+        return None
+    return data["solution"]["response"]
+
+
+def extract_apollo_data(html):
+    match = re.search(r'window\.SEEK_APOLLO_DATA\s*=\s*(\{.*?\});\s*\n', html, re.DOTALL)
+    if not match:
+        return None
+    return json.loads(match.group(1))
+
+
+def resolve_ref(apollo_data, ref):
+    """Ambil object asli dari referensi {'__ref': 'Key:id'}"""
+    if not ref or "__ref" not in ref:
+        return None
+    return apollo_data.get(ref["__ref"])
+
+
+def get_text_safe(soup, automation_key):
+    el = soup.find(attrs={"data-automation": automation_key})
+    return el.get_text(separator=" ", strip=True) if el else None
+
+
+# SCRAPE SEARCH PAGE
+def scrape_search_page(query="machine-learning-jobs", daterange=1, max_pages=10):
     jobs = []
     for page in range(1, max_pages + 1):
-        # url = f"https://id.jobstreet.com/id/{query}?page={page}"
         url = f"https://id.jobstreet.com/{query}?page={page}&daterange={daterange}"
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        
-        if resp.status_code != 200:
-            print(f"Page {page}: status {resp.status_code}, stop")
+        html = fetch_via_flaresolverr(url)
+
+        if html is None:
+            print(f"Page {page}: fetch failed, stop")
             break
-        
-        soup = BeautifulSoup(resp.text, "html.parser")
-        cards = soup.select('article[data-testid="job-card"]')
-        
-        if not cards:
+
+        apollo_data = extract_apollo_data(html)
+        if apollo_data is None:
+            print(f"Page {page}: apollo data not found, stop")
+            break
+
+        root_query = apollo_data.get("ROOT_QUERY", {})
+        job_search_key = next((k for k in root_query if k.startswith("jobSearchV7(")), None)
+
+        if not job_search_key:
+            print(f"Page {page}: no job search data")
+            break
+
+        raw_jobs = root_query[job_search_key].get("results", {}).get("jobs", [])
+
+        if not raw_jobs:
             print(f"Page {page}: no more jobs")
             break
-        
-        for card in cards:
-            job_id = card.get("data-job-id")
-            title_el = card.select_one('a[data-automation="jobTitle"]')
-            company_el = card.select_one('a[data-automation="jobCompany"]')
-            location_el = card.select_one('a[data-automation="jobLocation"]')
-            salary_el = card.select_one('span[data-automation="jobSalary"]')
-            desc_el = card.select_one('span[data-automation="jobShortDescription"]')
-            date_el = card.select_one('div[data-automation="jobListingDate"] span')
-            
-            date_text = date_el.get_text(strip=True) if date_el else ""
-            
+
+        for job in raw_jobs:
+            job_id = job.get("id")
+            location = resolve_ref(apollo_data, job.get("location"))
+            salary = job.get("salary", {}) or {}
+
             jobs.append({
                 "job_id": job_id,
-                "title": title_el.get_text(strip=True) if title_el else None,
-                "company": company_el.get_text(strip=True) if company_el else None,
-                "location": location_el.get_text(strip=True) if location_el else None,
-                "salary": salary_el.get_text(strip=True) if salary_el else None,
-                "description": desc_el.get_text(strip=True) if desc_el else None,
-                "posted": date_text,
+                "title": job.get("title"),
+                "company": job.get("advertiser", {}).get("name"),
+                "location": location.get("displayName", {}).get("text") if location else None,
+                "salary": salary.get("displayValue") or (
+                    f"{salary.get('min')}-{salary.get('max')} {salary.get('currency')}"
+                    if salary.get("min") and salary.get("max") else None
+                ),
+                "description": job.get("abstract"),
+                "posted": job.get("listedAt", {}).get("dateTimeUtc"),
                 "link": f"https://id.jobstreet.com/id/job/{job_id}" if job_id else None,
             })
-        
-        print(f"Page {page}: {len(cards)} jobs collected")
-        time.sleep(random.uniform(1,2))
+
+        print(f"Page {page}: {len(raw_jobs)} jobs collected")
+        time.sleep(random.uniform(1, 2))
 
     return jobs
 
 
+# SCRAPE DETAIL JOB PAGE
 def scrape_job_detail(job_id):
-    url = f"https://id.jobstreet.com/id/job/{job_id}"
-    resp=requests.get(url, headers=HEADERS, timeout=15)
-    
-    if resp.status_code != 200:
-        print(f"Job ID {job_id}: status {resp.status_code}, stop")
-        return None
-    
-    soup = BeautifulSoup(resp.text, "html.parser")
-    
-    
-    title_el = soup.select_one('h1[data-automation="job-detail-title"]')
-    company_el = soup.select_one('span[data-automation="advertiser-name"]')
-    location_el = soup.select_one('span[data-automation="job-detail-location"]')
-    classification_el = soup.select_one('span[data-automation="job-detail-classifications"]')
-    work_type_el = soup.select_one('span[data-automation="job-detail-work-type"]')
-    salary_el = soup.select_one('span[data-automation="job-detail-salary"]')
-    desc_el = soup.select_one('div[data-automation="jobAdDetails"]')
-    posted_el = soup.find('span', string=re.compile(r'(Diposting|Posted)', re.IGNORECASE))
+    detail_url = f"https://id.jobstreet.com/id/job/{job_id}"
+    html = fetch_via_flaresolverr(detail_url)
 
+    if html is None:
+        return None
+
+    soup = BeautifulSoup(html, "html.parser")
+    job_ad_div = soup.find("div", {"data-automation": "jobAdDetails"})
+    
     return {
         "job_id": job_id,
-        "title": title_el.get_text(strip=True) if title_el else None,
-        "company": company_el.get_text(strip=True) if company_el else None,
-        "location": location_el.get_text(strip=True) if location_el else None,
-        "classification": classification_el.get_text(strip=True) if classification_el else None,
-        "work_type": work_type_el.get_text(strip=True) if work_type_el else None,
-        "salary": salary_el.get_text(strip=True) if salary_el else None,
-        "full_description": desc_el.get_text(separator="\n", strip=True) if desc_el else None,
-        "url": url,
-        "posted": posted_el.get_text(strip=True) if posted_el else None
+        "title": get_text_safe(soup, "job-detail-title"),
+        "company": get_text_safe(soup, "advertiser-name"),
+        "location": get_text_safe(soup, "job-detail-location"),
+        "work_type": get_text_safe(soup, "job-detail-work-type"),
+        "classifications": get_text_safe(soup, "job-detail-classifications"),
+        "full_description": job_ad_div.get_text(separator="\n", strip=True) if job_ad_div else None,
     }
 
 
-# def scrape_all_jobs_with_detail(query="machine-learning-jobs", max_pages=10, daterange=1):
-#     job_list = scrape_jobstreet(query=query, max_pages=max_pages, daterange=daterange)
+# FINAL SCRAPE
+def scrape_job_full(search_job_data):
+    job_id = search_job_data["job_id"]
+    detail = scrape_job_detail(job_id)
 
-#     detailed_jobs = []
-#     for job in job_list:
-#         if not job["job_id"]:
-#             continue
-#         detail = scrape_job_detail(job_id=job["job_id"])
-#         if detail:
-#             detailed_jobs.append(detail)
-#         time.sleep(random.uniform(1,2))
-    
-#     return detailed_jobs
+    if detail is None:
+        return None
 
-
-# import json
-# if __name__ == "__main__":
-#     all_jobs = scrape_jobstreet()
-#     with open("all_jobs.json", "w", encoding="utf-8") as f:
-#         json.dump(all_jobs, f, indent=2, ensure_ascii=False)
-#     print (f"\nTotal: {len(all_jobs)} within 1 day ago")
-#     for j in all_jobs:
-#         print(f"job id {j.get('job_id', '')} and title {j.get('title', '')}")
+    return {
+        "job_id": job_id,
+        "title": detail.get("title") or search_job_data.get("title"),
+        "company": detail.get("company") or search_job_data.get("company"),
+        "location": detail.get("location") or search_job_data.get("location"),
+        "classification": detail.get("classifications"),
+        "work_type": detail.get("work_type"),
+        "salary": search_job_data.get("salary"),
+        "full_description": detail.get("full_description") or search_job_data.get("description"),
+        "url": search_job_data.get("link"),
+        "posted": search_job_data.get("posted"),
+    }
 
 
-# import json
-# if __name__ == "__main__":
-#     results = scrape_all_jobs_with_detail()
-#     with open("all_jobs_and_details.json", "w", encoding="utf-8") as f:
-#         json.dump(results, f, indent=2, ensure_ascii=False)
+if __name__ == "__main__":
+    search = scrape_search_page()
+    print(f"Total jobs from search: {len(search)}")
+
+    jobs_full = []
+    for i, job in enumerate(search, 1):
+        print(f"[{i}/{len(search)}] Scraping detail: {job['title']} (id={job['job_id']})")
+        full_job = scrape_job_full(job)
+        if full_job:
+            jobs_full.append(full_job)
+        time.sleep(random.uniform(1, 2))
+
+    print(f"Completed: {len(jobs_full)} / {len(search)}")
+
+    with open("full_jobs.json", "w", encoding="utf-8") as f:
+        json.dump(jobs_full, f, indent=2, ensure_ascii=False)
+    print("Saved to jobs_full.json")
