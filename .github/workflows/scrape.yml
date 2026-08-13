@@ -2,7 +2,8 @@ name: Job Scraper Pipeline
 
 on:
   schedule:
-    - cron: "0 22 * * *"
+    # 00:30 UTC = 07:30 WIB
+    - cron: "30 0 * * *"
   workflow_dispatch:
 
 jobs:
@@ -11,6 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # DOWNLOAD PROXY FROM REPO PROXY-LIST
+      - name: Download latest proxy list
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repo: mkhafidm/proxy-list
+          workflow: update-proxy.yml
+          name: proxy-lists
+          path: ./proxies/
+
+      # SETUP PYTHON & DEPENDENCIES
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -18,6 +30,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # CREDENTIALS & RUN
       - name: Write credentials
         run: echo '${{ secrets.GCP_CREDENTIALS }}' > credentials.json
 
