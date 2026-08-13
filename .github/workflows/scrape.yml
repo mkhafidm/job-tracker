@@ -18,7 +18,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           repo: mkhafidm/proxy-list
-          workflow: update-proxy.yml
+          workflow: daily-fetch.yaml 
+          workflow_conclusion: success
           name: proxy-lists
           path: ./proxies/
 
