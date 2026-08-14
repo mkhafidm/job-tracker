@@ -1,5 +1,8 @@
 name: Job Scraper Pipeline
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: "7 23 * * *"    # 23:07 UTC = 06:07 WIB
@@ -49,3 +52,16 @@ jobs:
           DATERANGE: ${{ github.event.inputs.daterange || '1' }}
           MAX_PAGES: ${{ github.event.inputs.max_pages || '10' }}
         run: python main.py
+
+      - name: Commit run log
+        run: |
+          git config --local user.email "146152744+mkhafidm@users.noreply.github.com"
+          git config --local user.name "mkhafidm"
+          echo "Run at $(date '+%Y-%m-%d %H:%M:%S WIB')" >> run_log.txt
+          git add run_log.txt
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Daily scrape run - $(date '+%Y-%m-%d %H:%M')"
+            git push
+          fi
