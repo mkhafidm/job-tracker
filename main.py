@@ -8,7 +8,7 @@ import json
 import os
 
 
-def run_pipeline(query="machine-learning-jobs", daterange=1, max_pages=10, spreadsheet_name="Project 2026", worksheet_name="Job Selection"):
+def run_pipeline(query="machine-learning-jobs", daterange=1, max_pages=10, spreadsheet_name="GRANDLINE", worksheet_name="Job Screener"):
     list_job = scrape_search_page(query=query, daterange=daterange, max_pages=max_pages)
     print(f"Total job collected in range {daterange}: {len(list_job)}")
 
