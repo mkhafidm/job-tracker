@@ -6,26 +6,27 @@ import re
 gc = gspread.service_account(filename="credentials.json")
 
 SHEET_HEADERS = [
-    "Apply", "Tanggal Post", "Perusahaan", "Role", "Kota", "Source", "Via Kirim", "Versi CV",
-    "Salary", "Core Requirements", "Requirements Gap", "Note", "Age", "URL", "Prioritas"
+    "Apply", "Posted Date", "Company", "Role", "City", "Source", "Send via", "CV Version",
+    "Salary", "Salary Expectation", "Core Requirements", "Requirements Gap", "Note", "Age", "URL", "Priority"
 ]
 
 COLUMN_MAP = {
     "Apply": lambda j: False,                                    
-    "Tanggal Post": lambda j: parse_posted_date(j.get("posted", "")),                                       
-    "Perusahaan": lambda j: j.get("company", ""),            
+    "Posted Date": lambda j: parse_posted_date(j.get("posted", "")),                                       
+    "Company": lambda j: j.get("company", ""),            
     "Role": lambda j: j.get("title", ""),                        
-    "Kota": lambda j: j.get("location", ""),                    
+    "City": lambda j: j.get("location", ""),                    
     "Source": lambda j: "JobStreet",                             
-    "Via Kirim": lambda j: "",
-    "Versi CV": lambda j: "",
-    "Salary": lambda j: j.get("salary", ""),                
+    "Send via": lambda j: "",
+    "CV Version": lambda j: "",
+    "Salary": lambda j: j.get("salary", ""),   
+    "Salary Expectation": lambda j: "",              
     "Core Requirements": lambda j: j.get("core_requirements", ""), 
     "Requirements Gap": lambda j: "",
     "Note": lambda j: "",
     "Age": lambda j: "",
     "URL": lambda j: j.get("url", ""),                        
-    "Prioritas": lambda j: ""                                
+    "Priority": lambda j: ""                                
 }
 
 
@@ -64,7 +65,7 @@ def upload_jobs_to_gsheet(jobs:list, spreadsheet_name, worksheet_name):
             next_row = len(col_values) + 1
             end_row = next_row + len(rows_to_append) - 1
 
-            worksheet.update(f"A{next_row}:O{end_row}", rows_to_append, value_input_option="USER_ENTERED")
+            worksheet.update(f"A{next_row}:P{end_row}", rows_to_append, value_input_option="USER_ENTERED")
             print(f"Success upload {len(rows_to_append)} data, start row {next_row}")
 
         else:
