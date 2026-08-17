@@ -7,7 +7,7 @@ gc = gspread.service_account(filename="credentials.json")
 
 SHEET_HEADERS = [
     "Apply", "Tanggal Post", "Perusahaan", "Role", "Kota", "Source", "Via Kirim", "Versi CV",
-    "Gaji Expec", "Core Requirements", "Requirements Gap", "Note", "Age", "URL", "Prioritas"
+    "Salary", "Core Requirements", "Requirements Gap", "Note", "Age", "URL", "Prioritas"
 ]
 
 COLUMN_MAP = {
@@ -19,7 +19,7 @@ COLUMN_MAP = {
     "Source": lambda j: "JobStreet",                             
     "Via Kirim": lambda j: "",
     "Versi CV": lambda j: "",
-    "Gaji Expec": lambda j: j.get("salary", ""),                
+    "Salary": lambda j: j.get("salary", ""),                
     "Core Requirements": lambda j: j.get("core_requirements", ""), 
     "Requirements Gap": lambda j: "",
     "Note": lambda j: "",
