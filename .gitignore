@@ -10,3 +10,4 @@ __pycache__/
 *.ipynb
 *.html
 core/scraper.py
+README_PRIVATE.md

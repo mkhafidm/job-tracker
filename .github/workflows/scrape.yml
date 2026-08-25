@@ -53,6 +53,12 @@ jobs:
           MAX_PAGES: ${{ github.event.inputs.max_pages || '10' }}
         run: python main.py
 
+      - name: Run weekly report
+        if: always()
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python weekly_main.py
+
       - name: Commit run log
         env:
           TZ: "Asia/Jakarta"

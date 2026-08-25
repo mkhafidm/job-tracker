@@ -1,14 +1,14 @@
-# Job Scraper — JobStreet (SEEK) Pipeline
+# Job Scraper — Public Job Listings Pipeline
 
-Automated daily scraper + weekly analytics for JobStreet Indonesia, built with FlareSolverr, Groq LLM, and Google Sheets.
+Automated daily collection + weekly analytics for public job listings in Indonesia, built with resilient fetching, LLM enrichment, and Google Sheets.
 
 ## Architecture
-- **Scraper:** FlareSolverr bypass for Cloudflare, `SEEK_APOLLO_DATA` extraction, paginated search + detail pages
+- **Collector:** Resilient fetching for public listings, paginated search + detail enrichment with structured parsing
 - **Summarizer:** Groq `qwen/qwen3.6-27b` extracts core requirements (tools/tech) from descriptions
 - **Sheets:** `gspread` appends to `GRANDLINE` → `Job Screener` (16 cols) + weekly analytics
 - **Weekly Report:** Mon-Sun WIB, `pandas` + LLM 2-field classification (`Role Group` + `Seniority`), salary `avg+median` IDR-only, city normalization, 5 stacked sections
 
-> Scraper implementation is intentionally redacted in this public repo. See `core/scraper.py.example` for module interface and `specs/weekly-report-spec.md` for full architecture & design rationale. Full implementation available on request — reach out via [LinkedIn/email].
+> Collector implementation is intentionally redacted in this public repo. See `core/scraper.py.example` for module interface and `specs/weekly-report-spec.md` for full architecture & design rationale. Full implementation available on request — reach out via [LinkedIn/email].
 
 ## Weekly Report — 5 Sections (1 Tab `Weekly YYYY-MM-DD_YYYY-MM-DD`)
 1. **Demand Ranking** — 4 relevant groups × 3 seniority (Intern/Standard/Senior/Lead) + Total/%
@@ -32,4 +32,3 @@ Root `config.py` — `WIB`, `GRANDLINE`, `Job Screener`, `GROQ_API_KEY` via `.en
 
 ## Spec
 See `specs/weekly-report-spec.md` — final locked source of truth (Mon-Sun flexible, City Norm only Sections 2 & 5, long/stacked, currency-count sync).
-
