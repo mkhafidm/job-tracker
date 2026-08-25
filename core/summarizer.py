@@ -1,3 +1,5 @@
+# LLM summarizer for job requirements (Groq)
+
 import os
 import json
 from groq import Groq
@@ -30,16 +32,8 @@ Job description:
         messages=[{"role": "user", "content": prompt}],
         model="qwen/qwen3.6-27b",
         temperature=0.2,
-        reasoning_effort="none", 
+        reasoning_effort="none",
     )
-
-    # resp = client.chat.completions.create(
-    #     messages=[{"role": "user", "content": prompt}],
-    #     model="llama-3.3-70b-versatile",
-    #     temperature=0.2,
-    # )
-
-    # print(resp.choices[0].message.content)
     result = resp.choices[0].message.content
     return result
 

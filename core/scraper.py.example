@@ -1,0 +1,10 @@
+"""
+Scraper module — implementation redacted for this public repo.
+
+High-level: bypasses anti-bot protection (FlareSolverr) to scrape job
+listings from target source (SEEK-based platform). Full implementation
+available on request — reach out via [email/LinkedIn].
+"""
+
+def scrape_jobs(*args, **kwargs) -> list[dict]:
+    raise NotImplementedError("Redacted — see docstring above")

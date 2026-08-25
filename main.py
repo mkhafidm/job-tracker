@@ -1,3 +1,5 @@
+# Daily pipeline: scrape -> summarize -> save -> upload to Google Sheets
+
 from core.scraper import scrape_search_page, scrape_job_detail, scrape_job_full
 from core.summarizer import summarize_description
 from core.google_sheets import upload_jobs_to_gsheet
@@ -24,7 +26,6 @@ def run_pipeline(query="machine-learning-jobs", daterange=1, max_pages=10, sprea
             time.sleep(random.uniform(1, 2))
             continue
 
-        # Add key in detail job: core requirements
         if detail_job.get("full_description"):
             try:
                 core_requirements = summarize_description(detail_job["full_description"])
@@ -37,18 +38,17 @@ def run_pipeline(query="machine-learning-jobs", daterange=1, max_pages=10, sprea
 
         detail_job["core_requirements"] = core_requirements
         all_detailed_job.append(detail_job)
-        
+
         time.sleep(random.uniform(1, 2))
-    
+
     print(f"Success {len(all_detailed_job)} / {len(list_job)}")
-    
-    # Save to json
+
+    # Persist locally and upload to Sheets
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     with open(f"all_jobs_{timestamp}.json", "w", encoding="utf-8") as f:
         json.dump(all_detailed_job, f, indent=2, ensure_ascii=False)
     print("Saved to all_jobs_timestamp.json")
 
-    # Upload to spreadsheet
     success = upload_jobs_to_gsheet(jobs=all_detailed_job, spreadsheet_name=spreadsheet_name, worksheet_name=worksheet_name)
     if not success:
         print("WARNING: Failed upload data to spreadsheet")

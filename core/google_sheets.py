@@ -1,9 +1,16 @@
+# Google Sheets helpers for Job Screener
+
 from datetime import datetime, timedelta
 import gspread
-import re
+from functools import lru_cache
 
 
-gc = gspread.service_account(filename="credentials.json")
+# Cached service account client to avoid re-auth on each import
+@lru_cache
+def get_gspread_client():
+    return gspread.service_account(filename="credentials.json")
+gc = get_gspread_client()
+
 
 SHEET_HEADERS = [
     "Apply", "Posted Date", "Company", "Role", "City", "Source", "Send via", "CV Version",
@@ -30,6 +37,7 @@ COLUMN_MAP = {
 }
 
 
+# Convert ISO datetime from scraper to sheet display format DD/MM/YYYY
 def parse_posted_date(posted_iso, reference_time=None):
     if not posted_iso:
         return ""
@@ -37,30 +45,29 @@ def parse_posted_date(posted_iso, reference_time=None):
         dt = datetime.fromisoformat(posted_iso.replace("Z", "+00:00"))
         return dt.strftime("%d/%m/%Y")
     except (ValueError, TypeError) as e:
-        print(f"Gagal parse tanggal: {posted_iso} - {e}")
+        print(f"Failed to parse date: {posted_iso} - {e}")
         return posted_iso
 
 
+# Append jobs to sheet starting after last used row in column C (Company)
 def upload_jobs_to_gsheet(jobs:list, spreadsheet_name, worksheet_name):
     try:
         sh = gc.open(spreadsheet_name)
         worksheet = sh.worksheet(worksheet_name)
 
-        # Add data based on column map
         rows_to_append = []
         for job in jobs:
             row = []
             for col_name in SHEET_HEADERS:
                 extractor = COLUMN_MAP.get(col_name)
                 if extractor:
-                    value = extractor(job) # run lambda function
+                    value = extractor(job)
                 else:
                     value = ""
                 row.append(value)
             rows_to_append.append(row)
-        
+
         if rows_to_append:
-            # find next row using column C
             col_values = worksheet.col_values(3)
             next_row = len(col_values) + 1
             end_row = next_row + len(rows_to_append) - 1
