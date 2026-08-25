@@ -26,9 +26,3 @@ python main.py
 python weekly_main.py
 python weekly_main.py --reference-date "2026-08-22"
 ```
-
-## Config
-Root `config.py` — `WIB`, `GRANDLINE`, `Job Screener`, `GROQ_API_KEY` via `.env` (not hardcoded), `CANONICAL_GROUPS` 5, `SENIORITY_GROUPS` 3
-
-## Spec
-See `specs/weekly-report-spec.md` — final locked source of truth (Mon-Sun flexible, City Norm only Sections 2 & 5, long/stacked, currency-count sync).
