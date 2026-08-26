@@ -11,3 +11,4 @@ __pycache__/
 *.html
 core/scraper.py
 README_PRIVATE.md
+scraper_b64.txt

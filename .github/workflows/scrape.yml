@@ -1,8 +1,6 @@
 name: Job Scraper Pipeline
-
 permissions:
   contents: write
-
 on:
   schedule:
     - cron: "7 23 * * *"    # 23:07 UTC = 06:07 WIB
@@ -16,7 +14,6 @@ on:
         description: 'Max page will scrape'
         required: false
         default: '10'
-
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -25,26 +22,22 @@ jobs:
         image: ghcr.io/flaresolverr/flaresolverr:latest
         ports:
           - 8191:8191
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Install dependencies
         run: pip install -r requirements.txt
-
       - name: Wait for FlareSolverr to be ready
         run: sleep 10
-
       - name: Write credentials
         run: |
           cat << 'EOF' > credentials.json
           ${{ secrets.GCP_CREDENTIALS }}
           EOF
-
+      - name: Reconstruct scraper module
+        run: echo "${{ secrets.JOB_SCRAPER_B64 }}" | base64 -d > core/scraper.py
       - name: Run pipeline
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -52,13 +45,11 @@ jobs:
           DATERANGE: ${{ github.event.inputs.daterange || '1' }}
           MAX_PAGES: ${{ github.event.inputs.max_pages || '10' }}
         run: python main.py
-
       - name: Run weekly report
         if: always()
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python weekly_main.py
-
       - name: Commit run log
         env:
           TZ: "Asia/Jakarta"
