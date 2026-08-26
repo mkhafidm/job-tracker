@@ -50,20 +50,27 @@ def parse_posted_date(posted_iso, reference_time=None):
 
 
 # Append jobs to sheet starting after last used row in column C (Company)
-def upload_jobs_to_gsheet(jobs:list, spreadsheet_name, worksheet_name):
+def upload_jobs_to_gsheet(jobs: list, spreadsheet_name, worksheet_name):
     try:
         sh = gc.open(spreadsheet_name)
         worksheet = sh.worksheet(worksheet_name)
 
+        # Get all existing URLs from the sheet (Column O = URL, index 15 in SHEET_HEADERS)
+        url_col_index = SHEET_HEADERS.index("URL") + 1
+        existing_urls = set(worksheet.col_values(url_col_index))
+
         rows_to_append = []
+        skipped = 0
         for job in jobs:
+            job_url = job.get("url", "")
+            if job_url and job_url in existing_urls:
+                skipped += 1
+                continue  # Already scraped, skip it
+
             row = []
             for col_name in SHEET_HEADERS:
                 extractor = COLUMN_MAP.get(col_name)
-                if extractor:
-                    value = extractor(job)
-                else:
-                    value = ""
+                value = extractor(job) if extractor else ""
                 row.append(value)
             rows_to_append.append(row)
 
@@ -71,16 +78,12 @@ def upload_jobs_to_gsheet(jobs:list, spreadsheet_name, worksheet_name):
             col_values = worksheet.col_values(3)
             next_row = len(col_values) + 1
             end_row = next_row + len(rows_to_append) - 1
-
             worksheet.update(f"A{next_row}:P{end_row}", rows_to_append, value_input_option="USER_ENTERED")
-            print(f"Success upload {len(rows_to_append)} data, start row {next_row}")
-
+            print(f"Success upload {len(rows_to_append)} data, start row {next_row} (skipped {skipped} duplicates)")
         else:
-            print("No data to upload")
-
-
+            print(f"No new data to upload (skipped {skipped} duplicates)")
         return True
-    
+
     except Exception as e:
         print(e)
         return False
